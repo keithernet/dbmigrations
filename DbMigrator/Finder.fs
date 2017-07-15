@@ -7,25 +7,23 @@ module Finder =
 
     let private coerce value = (box >> unbox) value
 
-    let private getMigrationAssemblyClasses (assemblies) = 
-        assemblies 
-            |> Array.find (fun (ass: Reflection.Assembly) -> ass.FullName.Contains("Migrations")) 
-            |> (fun (a: Reflection.Assembly) -> a.GetTypes())
+    let private getMigrationAssemblyClasses = 
+        Seq.find (fun (ass: Reflection.Assembly) -> ass.FullName.Contains("Migrations")) 
+            >> (fun (a: Reflection.Assembly) -> a.GetTypes())
 
-    let private getMigrationInstances (types) =
-        types |> Array.filter (fun (t: Type) -> t.GetInterfaces() 
-                                                    |> Array.exists (fun t -> t.ToString() = "MigrationHelpers.Migration"))
-              |>  Array.map (fun a -> Activator.CreateInstance(a)
-                                                 |> (fun i -> (coerce i: Migration)))
+    let private getMigrationInstances =
+        Seq.filter (fun (t: Type) -> t.GetInterfaces() 
+                                     |> Seq.exists (fun t -> t.ToString() = "MigrationHelpers.Migration"))
+              >>  Seq.map (fun a -> Activator.CreateInstance(a)
+                                     |> (fun i -> (coerce i: Migration)))
 
     let findMigrations (currentVersion: int) = 
         let t = Noop()
-        let assemblies = AppDomain.CurrentDomain.GetAssemblies() 
-        let types = getMigrationAssemblyClasses assemblies 
-
-        getMigrationInstances types
-            |> Array.filter (fun (m:Migration) -> m.Version > currentVersion)
-            |> Array.sortBy (fun (m:Migration) -> m.Version)
+        AppDomain.CurrentDomain.GetAssemblies() 
+            |> getMigrationAssemblyClasses
+            |> getMigrationInstances
+            |> Seq.filter (fun (m:Migration) -> m.Version > currentVersion)
+            |> Seq.sortBy (fun (m:Migration) -> m.Version)
 
     let getCurrentVersion = 
         Runner.runScalar(@"IF (EXISTS (SELECT * 
