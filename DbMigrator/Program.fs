@@ -18,6 +18,6 @@ let main argv =
         
         toRun |> Array.iter (fun i -> 
                                 printfn "Attempting to run %A" (i.GetType().Name)
-                                printfn "Updated to version: %A" (Runner.runMigration(i)))
+                                printfn "Updated to version: %A\n" (Runner.runMigration(i)))
     with e -> printfn "Failed with exception: %A" e 
     Console.Read()
